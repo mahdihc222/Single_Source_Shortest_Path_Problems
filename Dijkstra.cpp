@@ -51,23 +51,23 @@ void dijkstra(int s, vector<long long> &d, vector<int> &p, vector<vector<pair<in
     d.assign(n, LLONG_MAX);
     p.assign(n, -1);
     d[s] = 0;
-    set<pair<long long, int>> q;
-    q.insert({0, s});
+    priority_queue<pair<long long, int>, vector<pair<long long, int>>, greater<pair<long long,int>>> q;
+    q.push({0, s});
     while (!q.empty())
     {
-        int v = q.begin()->second;
-        q.erase(q.begin());
-
+        int v = q.top().second;
+        long long dist = q.top().first;
+        q.pop();
+        if (dist != d[v]) continue;
         for (auto edge : adj[v])
         {
             int to = edge.first;
             long long len = edge.second;
             if (d[v] + len < d[to])
             {
-                q.erase({d[to], to});
                 d[to] = d[v] + len;
                 p[to] = v;
-                q.insert({d[to], to});
+                q.push({d[to], to});
             }
         }
     }
