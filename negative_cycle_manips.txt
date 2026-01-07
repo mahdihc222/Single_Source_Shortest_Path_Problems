@@ -1,0 +1,243 @@
+Perfect! Let’s go **step by step**. I’ll analyze your code and explain **what to change** for different variants, and **why**, while keeping the CSES-style **super-source + Bellman–Ford** structure intact.
+
+---
+
+## **Your Current Code — Overview**
+
+* You’re using a **super-source `0`** connected to all nodes with `0` weight edges. ✅
+* Standard Bellman–Ford is run for `n` iterations. ✅
+* You track parents to **reconstruct a negative cycle**. ✅
+* You check for negative cycles **globally**, not from a specific source. ✅
+
+This is **exactly CSES Negative Cycle Detection style**.
+
+---
+
+# **Variant Changes**
+
+## **1️⃣ Negative Cycle Reachable From a Given Source `s`**
+
+**Goal:** Only detect negative cycles reachable from a specific node.
+
+**Changes needed:**
+
+1. Remove super-source edges:
+
+```cpp
+// Remove this part:
+for (int i = 1; i <= n; i++)
+    adj[0].push_back({i, 0});
+```
+
+2. Initialize only your source:
+
+```cpp
+dist.assign(n + 1, LLONG_MAX);
+dist[s] = 0;
+parent.assign(n + 1, -1);
+```
+
+3. Run Bellman–Ford from `s` (same loop)
+
+✅ **Why:** Super-source makes all cycles “reachable,” which we don’t want. Only distances from `s` should matter.
+
+---
+
+## **2️⃣ Negative Cycle That Can Reach Destination `n`**
+
+**Goal:** Only cycles that can eventually reach node `n`.
+
+**Changes needed:**
+
+1. Compute **nodes that can reach `n`** using **reverse DFS/BFS**:
+
+```cpp
+vector<vector<int>> rev(n+1);
+for(int u=1;u<=n;u++)
+    for(auto &[v,w] : adj[u])
+        rev[v].push_back(u);
+
+vector<bool> canReach(n+1, false);
+queue<int> q;
+q.push(n);
+canReach[n] = true;
+while(!q.empty()){
+    int u = q.front(); q.pop();
+    for(int v : rev[u]){
+        if(!canReach[v]){
+            canReach[v] = true;
+            q.push(v);
+        }
+    }
+}
+```
+
+2. During **relaxation**, skip edges where `v` cannot reach `n`:
+
+```cpp
+if (!canReach[v]) continue;
+```
+
+✅ **Why:** Only cycles that can influence the shortest path to `n` matter. Others can be ignored.
+
+---
+
+## **3️⃣ Print Shortest Negative Cycle (Fewest Nodes)**
+
+**Goal:** If multiple cycles exist, output the one with **minimum length**.
+
+**Changes needed:**
+
+1. Keep **iteration count of last update**:
+
+```cpp
+vector<int> lastUpdated(n+1, -1);
+```
+
+2. During relaxation, store iteration:
+
+```cpp
+lastUpdated[v] = i;
+```
+
+3. After detecting a cycle, **pick the one with smallest `lastUpdated` iteration**.
+
+✅ **Why:** Earlier relaxations imply fewer nodes in the cycle; otherwise, you may output a longer cycle arbitrarily.
+
+---
+
+## **4️⃣ Negative Cycle in Undirected Graph**
+
+**Goal:** Handle undirected edges.
+
+**Changes needed:**
+
+1. Convert undirected edge `u-v` into **two directed edges** `u→v` and `v→u`.
+
+```cpp
+adj[u].push_back({v, w});
+adj[v].push_back({u, w});
+```
+
+2. If `w < 0`, you immediately have a 2-node negative cycle: `(u → v → u)`.
+
+✅ **Why:** Undirected negative edges are **automatically cycles**, Bellman–Ford is just to find longer cycles.
+
+---
+
+## **5️⃣ Exactly One Negative Cycle Allowed**
+
+**Goal:** Detect **uniqueness**.
+
+**Changes needed:**
+
+1. Run Bellman–Ford **first time** → detect a cycle.
+
+2. Temporarily **remove edges of that cycle**:
+
+```cpp
+for(int i=0;i<neg_circle.size();i++){
+    int u = neg_circle[i];
+    int v = neg_circle[(i+1)%neg_circle.size()];
+    // Remove edge u->v from adj[u]
+}
+```
+
+3. Run Bellman–Ford again → if another negative cycle exists → not unique.
+
+✅ **Why:** Ensures only **one negative cycle** exists.
+
+---
+
+## **6️⃣ Negative Cycle With Minimum Total Weight**
+
+**Goal:** Find the cycle whose sum is **most negative**.
+
+**Changes needed:**
+
+1. Track **cycle weight** while reconstructing:
+
+```cpp
+long long sum = 0;
+for(int i=0;i<cycle.size();i++){
+    int u = cycle[i];
+    int v = cycle[(i+1)%cycle.size()];
+    sum += weight(u,v);
+}
+```
+
+2. Compare all cycles detected, output the **minimum sum**.
+
+✅ **Why:** Standard detection does not consider “heaviest negative effect.”
+
+---
+
+## **7️⃣ Time-Dependent Negative Cycles**
+
+**Goal:** Edge weights depend on `t`.
+
+**Changes needed:**
+
+1. Expand the graph into **layers `(node, t % k)`**.
+
+2. Modify relaxation to consider **time-dependent weight**:
+
+```cpp
+w = f(u,v,t); // depends on layer/time
+```
+
+✅ **Why:** State-augmented Bellman–Ford is needed.
+
+---
+
+## **8️⃣ Negative Cycle Avoidance**
+
+**Goal:** Find shortest path avoiding negative cycles.
+
+**Changes needed:**
+
+1. Run standard negative cycle detection → **mark all nodes in cycles**.
+
+2. Remove those nodes / skip edges to them during **normal shortest-path computation**.
+
+✅ **Why:** Only “safe” nodes should be used.
+
+---
+
+## **9️⃣ k-Relaxation Limited Detection**
+
+**Goal:** Only allow `k` relaxations.
+
+**Changes needed:**
+
+1. Stop Bellman–Ford after `k` iterations:
+
+```cpp
+for(int i=0;i<k;i++) { ... }
+```
+
+2. Check for further relaxation → cycle exists **within `k` edges**.
+
+✅ **Why:** Standard BF may take `n` iterations; here, we are bounded.
+
+---
+
+### ✅ Summary for your code
+
+| Variant | Main Change in Your Code                                   |
+| ------- | ---------------------------------------------------------- |
+| 1       | Remove super-source, init from source only                 |
+| 2       | Reverse graph + only relax edges that can reach `n`        |
+| 3       | Track last update iteration to find smallest cycle         |
+| 4       | Duplicate edges for undirected, immediate negative check   |
+| 5       | Remove edges of detected cycle, rerun BF                   |
+| 6       | Track total cycle weight, output min sum cycle             |
+| 7       | Layered graph `(node, time)`                               |
+| 8       | Mark nodes in negative cycles, skip them for shortest path |
+| 9       | Run only `k` iterations, check relaxation                  |
+
+---
+
+If you want, I can **rewrite your exact code for Variant 2 or 8**, fully working, so you can **copy-paste into CSES or CF**.
+
+Do you want me to do that next?
