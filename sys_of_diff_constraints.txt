@@ -1,0 +1,5 @@
+Variation 4: System of Difference Constraints
+The Problem:You are given a list of inequalities involving 
+$N$ variables:$$x_v - x_u \leq w$$$$x_b - x_a \leq 7$$$$...
+
+$$Find a valid value for every $x_i$ that satisfies all inequalities, or report that the system is impossible (contradictory).The Twist: This is purely algebra, but we solve it using Graph Theory.The Solution:Rearrange the inequality: $x_v - x_u \leq w \implies x_v \leq x_u + w$.This looks exactly like the relaxation condition in shortest paths: dist[v] <= dist[u] + w.Create a graph with $N$ nodes (variables).For every inequality $x_v - x_u \leq w$, add a directed edge $u \to v$ with weight $w$.Add a "super-source" node $0$ with edges of weight 0 to all other nodes (to ensure the graph is connected).Run Bellman-Ford (or SPFA) from node $0$.Result:If a Negative Cycle is detected, the system of inequalities is impossible (e.g., $A < B$ and $B < A$).Otherwise, the values in dist[i] are a valid solution for $x_i$.
