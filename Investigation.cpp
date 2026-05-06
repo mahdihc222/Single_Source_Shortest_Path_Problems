@@ -6,8 +6,7 @@ void dijkstra(int s, vector<long long> &d, vector<int> &p, vector<vector<pair<in
 {
 
     
-    int n = adj.size(); //ekhane n age thekei n+1 kintu 
-    //tmi barbar gadhar mto abr n+1 use kro
+    int n = adj.size();
     vector<long long> ways(n);
     vector<int> minFlights(n), maxFlights(n);
 
